@@ -1,21 +1,31 @@
 part of '../home.dart';
 
-PreferredSizeWidget appBar({Function(UserRole?)? onPressed, UserRole? userRole}){
+PreferredSizeWidget appBar({Function(UserRole?)? onPressed, UserRole? userRole, required BuildContext context}){
    return AppBar(
       scrolledUnderElevation: 0.1,
-      /// just testing for ui generate for apps logic
-      title: DropdownButton(
-        value: userRole,
-        items: UserRole.values.map((e) => DropdownMenuItem(
-          value: e,
-          child: Text(e.name),
-        )).toList(),
-        onChanged: onPressed,
-      ),
-      /// closing when finish your backend
       actions: [
-        ElevatedButton(onPressed: (){}, child: Icon(Symbols.search, size: 20, color: Colors.black)),
-
+        ElevatedButton.icon(
+          onPressed: () {
+            context.pushNamed(AppPath.filterLoads.name);
+          },
+          icon: Icon(Symbols.search, size: 18, color: Colors.white),
+          label: Text(
+            "Filter",
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFF6366F1),
+            elevation: 0,
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
         SizedBox(width: 10),
       ],
       bottom: PreferredSize(

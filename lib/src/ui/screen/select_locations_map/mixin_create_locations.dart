@@ -326,38 +326,83 @@ mixin MixCreateLocations on State<SelectLocationsMap>{
 
 }
 
-class SearchLocation extends SearchDelegate{
+
+class SearchLocation extends SearchDelegate {
+  // Styling the search bar itself
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return theme.copyWith(
+      inputDecorationTheme: const InputDecorationTheme(
+        border: InputBorder.none,
+        hintStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.w400),
+      ),
+    );
+  }
+
   @override
   List<Widget>? buildActions(BuildContext context) {
-    return [];
+    return [
+      if (query.isNotEmpty)
+        IconButton(
+          onPressed: () => query = '',
+          icon: const Icon(Symbols.close),
+        ),
+    ];
   }
 
   @override
   Widget? buildLeading(BuildContext context) {
     return IconButton(
-        onPressed: ()=> context.pop(),
-        icon: Icon(Symbols.navigate_before),
+      onPressed: () => context.pop(),
+      icon: const Icon(Symbols.arrow_back_ios_new, size: 20),
     );
   }
 
   @override
   Widget buildResults(BuildContext context) {
-    return SizedBox();
+    // Return a styled empty state or the results list
+    return _buildSearchContent();
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    return Column(
-      children: [
-        ...List.generate(4, (index) {
-          return ListTile(
-            title: Text("$index search"),
-            onTap: (){
-              context.pop([index]);
-            },
-          );
-        }),
-      ],
+    return _buildSearchContent();
+  }
+
+  Widget _buildSearchContent() {
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      itemCount: 4,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            leading: CircleAvatar(
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              child: Icon(Symbols.location_on,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  size: 20
+              ),
+            ),
+            title: Text(
+              "Location Result $index",
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              "Street name, City, Turkmenistan",
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            ),
+            trailing: const Icon(Symbols.north_west, size: 18, color: Colors.grey),
+            onTap: () => context.pop([index]),
+          ),
+        );
+      },
     );
   }
 }

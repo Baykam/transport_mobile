@@ -10,15 +10,25 @@ class _SearchBar extends StatelessWidget {
     return Material(
       borderRadius: BorderRadius.circular(16),
       color: Colors.black54,
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell( // Using InkWell for better tap response
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-        leading: const Icon(Icons.search_rounded, color: Color(0xFFFF6B35), size: 18),
-        title: Text('Search location…',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.4),
-              fontSize: 13,
-            )),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              const Icon(Icons.search_rounded, color: Color(0xFFFF6B35), size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Search location…',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.4),
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -32,12 +32,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: appBar(
+        context: context,
         userRole: userRole,
           onPressed: (v) =>
               setState(() => userRole = v ?? UserRole.broker)),
       body: HomeBody(loads: loads,secondLoads: secondLoad),
       floatingActionButton: FloatingActionButton(
-        child: Text('Add'),
+        backgroundColor: Colors.teal,
+        child: Icon(Symbols.add, size: 24),
         onPressed: () => context.pushNamed(AppPath.createLocationOnMap.name),
       ),
     );

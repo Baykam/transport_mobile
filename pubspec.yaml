@@ -43,6 +43,7 @@ dependencies:
   latlong2: ^0.9.0             # Math for coordinates
   flutter_map_location_marker: ^9.0.0 # The "Blue Dot" for live location
   http: ^1.2.0
+  flutter_map_marker_cluster: ^1.4.0
 
 dev_dependencies:
   flutter_test:

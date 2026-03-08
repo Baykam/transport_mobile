@@ -6,6 +6,6 @@ class CreateDataRoute extends GoRoute{
   CreateDataRoute({AppPath? appPath, super.routes}) : super(
     path: appPath?.path ?? AppPath.createData.path,
     name: appPath?.name ?? AppPath.createData.name,
-    builder: (context, state) => CreateDataScreen(),
+    builder: (context, state) => TransportFormScreen(),
   );
 }

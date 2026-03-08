@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:transport/src/ui/widgets/map/funcs.dart';
 
@@ -18,6 +19,8 @@ class MapView extends StatefulWidget {
     this.initialCenter = const LatLng(39.9334, 32.8597),
     this.initialZoom = 13.0,
     this.needButtons = true,
+    this.needTopGradient = false,
+    this.needCluster = false,
     this.polylines = const [],
   });
 
@@ -29,7 +32,7 @@ class MapView extends StatefulWidget {
   final MapController? mapController;
   final LatLng initialCenter;
   final double initialZoom;
-  final bool needButtons;
+  final bool needButtons, needTopGradient, needCluster;
   final List<Polyline> polylines;
 
 
@@ -44,6 +47,18 @@ class _MapViewState extends State<MapView> with TickerProviderStateMixin {
   StreamSubscription? _locationSub;
   final _locationStream =
   LocationMarkerDataStreamFactory().fromGeolocatorPositionStream();
+
+  int _clusterRadius() {
+    if (_zoomLevel < 5) {
+      return 120; // country
+    } else if (_zoomLevel < 8) {
+      return 100; // city
+    } else if (_zoomLevel < 12) {
+      return 80; // area
+    } else {
+      return 60;
+    }
+  }
 
   LatLng? _currentLocation;
   late final MapFunctions _mapFunctions;
@@ -135,8 +150,35 @@ class _MapViewState extends State<MapView> with TickerProviderStateMixin {
                 // tileBuilder: _darkTileBuilder,
               ),
 
+              if(!widget.needCluster)
               MarkerLayer(
                 markers: widget.markers ?? [],
+              ),
+
+              if(widget.needCluster)
+              MarkerClusterLayerWidget(
+                options: MarkerClusterLayerOptions(
+                  markers: widget.markers ?? [],
+                  maxClusterRadius: _clusterRadius(),
+                  size: const Size(50, 50),
+                  builder: (context, markers) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          markers.length.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
 
               PolylineLayer(polylines: widget.polylines),
@@ -157,6 +199,25 @@ class _MapViewState extends State<MapView> with TickerProviderStateMixin {
                 moveAnimationDuration: Duration.zero,
               ),
             ],
+          ),
+
+          if(widget.needTopGradient)
+          Positioned(
+            top: 0, left: 0, right: 0, height: 170,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      const Color(0xFF0D1117).withOpacity(0.6),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
 
           // ── Bottom vignette ────────────────────────────────────────
@@ -180,10 +241,10 @@ class _MapViewState extends State<MapView> with TickerProviderStateMixin {
           ),
 
           // ── Control buttons ────────────────────────────────────────
-          if (widget.needButtons)
-            Positioned(
-              bottom: 40,
-              right: 16,
+            AnimatedPositioned(
+              duration: Duration(milliseconds: 320),
+              bottom: !widget.needButtons ? -100 : 40,
+              right: !widget.needButtons ? -100 : 16,
               child: _MapControlPanel(
                 zoomLevel: _zoomLevel,
                 pressed: _pressed,

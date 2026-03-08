@@ -1,0 +1,49 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/Users/User/Desktop/projects/transport/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/nuget-populate"
+		},
+		{
+			"file" : "C:/Users/User/Desktop/projects/transport/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/b8ce14f13045f215b91c8e6ed4efd300/nuget-populate.rule"
+		},
+		{
+			"file" : "C:/Users/User/Desktop/projects/transport/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/b04d779bc0af0cadb41216d0fb222b1a/nuget-populate-complete.rule"
+		},
+		{
+			"file" : "C:/Users/User/Desktop/projects/transport/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/a34856815b86ec22be454cf194cad4c6/nuget-populate-build.rule"
+		},
+		{
+			"file" : "C:/Users/User/Desktop/projects/transport/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/a34856815b86ec22be454cf194cad4c6/nuget-populate-configure.rule"
+		},
+		{
+			"file" : "C:/Users/User/Desktop/projects/transport/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/a34856815b86ec22be454cf194cad4c6/nuget-populate-copyfile.rule"
+		},
+		{
+			"file" : "C:/Users/User/Desktop/projects/transport/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/a34856815b86ec22be454cf194cad4c6/nuget-populate-download.rule"
+		},
+		{
+			"file" : "C:/Users/User/Desktop/projects/transport/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/a34856815b86ec22be454cf194cad4c6/nuget-populate-install.rule"
+		},
+		{
+			"file" : "C:/Users/User/Desktop/projects/transport/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/a34856815b86ec22be454cf194cad4c6/nuget-populate-mkdir.rule"
+		},
+		{
+			"file" : "C:/Users/User/Desktop/projects/transport/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/a34856815b86ec22be454cf194cad4c6/nuget-populate-patch.rule"
+		},
+		{
+			"file" : "C:/Users/User/Desktop/projects/transport/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/a34856815b86ec22be454cf194cad4c6/nuget-populate-test.rule"
+		},
+		{
+			"file" : "C:/Users/User/Desktop/projects/transport/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/a34856815b86ec22be454cf194cad4c6/nuget-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"nuget-populate"
+		],
+		"name" : "nuget-populate"
+	}
+}

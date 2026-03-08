@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:transport/src/ui/router/screens/create_data/create_data.dart';
 import 'package:transport/src/ui/router/screens/create_location_on_map/create_locations.dart';
+import 'package:transport/src/ui/router/screens/filter_loads/filter_loads_route.dart';
+import 'package:transport/src/ui/router/screens/load_detail/load_detail.dart';
 import 'package:transport/src/ui/screen/settings/settings.dart';
 import 'path.dart';
 import '../screen/error/error.dart';
@@ -41,6 +43,8 @@ class AppRouter {
                 path: AppPath.home.path,
                 builder: (context, state) => const HomeScreen(),
                 routes: [
+                  FilterLoadsRoute(),
+                  LoadDetailRoute(),
                   CreateLocationsRoute(
                     routes: [
                       CreateDataRoute()

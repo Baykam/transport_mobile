@@ -5,7 +5,9 @@ enum AppPath{
     chat('/chat'),
     settings('/settings'),
     createLocationOnMap('createLocationsOnMap'),
-    createData('createData')
+    createData('createData'),
+    loadDetail('loadDetails/:id'),
+    filterLoads('filterLoads'),
     ;
 
     final String path;

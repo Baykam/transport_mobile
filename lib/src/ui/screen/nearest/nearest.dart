@@ -19,6 +19,7 @@ class NearestScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: MapView(
+        needCluster: true,
         markers: markerPoints.map((e) => Marker(
             point: e,
             height: 54,

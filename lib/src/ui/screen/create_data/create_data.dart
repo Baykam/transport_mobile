@@ -1,82 +1,88 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/material_symbols_icons.dart';
 
-class CreateDataScreen extends StatefulWidget {
-  const CreateDataScreen({super.key});
+const _accent      = Color(0xFF818CF8);
+const _cardSurface = Color(0xFF0D1117);
+const _darkSurface = Color(0xFF1E293B);
+const _inputSurf   = Color(0xFF1B232F);
+const _iconCol     = Color(0xFFCBD5E1);
 
+const _truckTypes = [
+  'Sedan / Minivan', 'Pickup Truck', 'Box Truck (3–5 t)',
+  'Medium Truck (5–10 t)', 'Heavy Truck (10–20 t)',
+  'Semi-Trailer (20 t+)', 'Flatbed Trailer', 'Refrigerated Truck',
+];
+const _loadTypes = [
+  'Full Truck Load (FTL)', 'Less Than Load (LTL)',
+  'Groupage / Consolidation', "Container 20'", "Container 40'",
+  'Flatbed Open Load', 'Oversized / Heavy Lift',
+];
+const _cargoTypes = [
+  'General Cargo', 'Electronics', 'Textiles', 'Food & Beverages',
+  'Chemicals', 'Machinery', 'Furniture', 'Raw Materials',
+  'Pharmaceuticals', 'Automotive Parts',
+];
+const _currencies = ['USD', 'EUR', 'TMT', 'RUB', 'IRR', 'TRY'];
+
+// ─────────────────────────────────────────────
+class TransportFormScreen extends StatefulWidget {
+  const TransportFormScreen({super.key});
   @override
-  State<CreateDataScreen> createState() => _CreateDataScreenState();
+  State<TransportFormScreen> createState() => _TransportFormScreenState();
 }
 
-class _CreateDataScreenState extends State<CreateDataScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
-  late Animation<double> _fadeAnim;
+class _TransportFormScreenState extends State<TransportFormScreen> {
+  final _formKey = GlobalKey<FormState>();
 
-  // Form fields
-  String? _fromCity;
-  String? _toCity;
+  // ── Required ──
+  final _weightCtrl  = TextEditingController();
+  final _palletsCtrl = TextEditingController();
+  final _priceCtrl   = TextEditingController();
+  DateTime? _pickupDate;
+  String _currency = 'USD';
+
+  // ── Advanced ──
+  final _volumeCtrl    = TextEditingController();
+  final _noteCtrl      = TextEditingController();
+  final _loadShareCtrl = TextEditingController(); // consolidation %
+  bool _flexibleLoad   = false;
+  String? _truckType;
+  String? _loadType;
   String? _cargoType;
-  String? _transportType;
-  String? _currency = 'USD';
-  String? _paymentTerm;
-  final _weightCtrl = TextEditingController();
-  final _cbmCtrl = TextEditingController();
-  final _priceCtrl = TextEditingController();
-  final _piecesCtrl = TextEditingController();
-  final _lengthCtrl = TextEditingController();
-  final _widthCtrl = TextEditingController();
-  final _heightCtrl = TextEditingController();
-  final _noteCtrl = TextEditingController();
-  DateTime? _loadingDate;
-  DateTime? _deliveryDate;
-  bool _isFragile = false;
-  bool _isHazardous = false;
+  bool _isFragile         = false;
+  bool _isHazardous       = false;
   bool _needsRefrigeration = false;
+  bool _needsInsurance    = false;
+  bool _customsClearance  = false;
 
-  static const _cities = [
-    'Ashgabat', 'Tehran', 'Istanbul', 'Dubai', 'Moscow',
-    'Almaty', 'Tashkent', 'Baku', 'Ankara', 'Mashhad',
-  ];
-  static const _cargoTypes = [
-    'General Cargo', 'Electronics', 'Textiles', 'Food & Beverages',
-    'Chemicals', 'Machinery', 'Furniture', 'Raw Materials', 'Pharmaceuticals',
-  ];
-  static const _transportTypes = [
-    'Full Truck Load (FTL)', 'Less Than Load (LTL)',
-    'Flatbed', 'Refrigerated', 'Container 20\'', 'Container 40\'',
-  ];
-  static const _paymentTerms = [
-    'Prepaid', 'Cash on Delivery', 'Net 15', 'Net 30', 'Letter of Credit',
-  ];
-  static const _currencies = ['USD', 'EUR', 'TMT', 'RUB', 'IRR', 'TRY'];
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
-    _animController.forward();
+  // Count filled advanced fields for the badge
+  int get _advancedFilledCount {
+    int n = 0;
+    if (_volumeCtrl.text.isNotEmpty) n++;
+    if (_loadShareCtrl.text.isNotEmpty) n++;
+    if (_noteCtrl.text.isNotEmpty) n++;
+    if (_truckType != null) n++;
+    if (_loadType != null) n++;
+    if (_cargoType != null) n++;
+    if (_isFragile) n++;
+    if (_isHazardous) n++;
+    if (_needsRefrigeration) n++;
+    if (_needsInsurance) n++;
+    if (_customsClearance) n++;
+    return n;
   }
 
   @override
   void dispose() {
-    _animController.dispose();
-    _weightCtrl.dispose();
-    _cbmCtrl.dispose();
-    _priceCtrl.dispose();
-    _piecesCtrl.dispose();
-    _lengthCtrl.dispose();
-    _widthCtrl.dispose();
-    _heightCtrl.dispose();
-    _noteCtrl.dispose();
+    for (final c in [_weightCtrl, _palletsCtrl, _priceCtrl, _volumeCtrl, _noteCtrl, _loadShareCtrl]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> _pickDate(bool isLoading) async {
+  Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -85,675 +91,799 @@ class _CreateDataScreenState extends State<CreateDataScreen>
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
           colorScheme: const ColorScheme.dark(
-            primary: Color(0xFFFF6B35),
-            surface: Color(0xFF1C2333),
+            primary: _accent, surface: Color(0xFF1C2333),
           ),
         ),
         child: child!,
       ),
     );
-    if (picked != null) {
-      setState(() => isLoading ? _loadingDate = picked : _deliveryDate = picked);
-    }
+    if (picked != null) setState(() => _pickupDate = picked);
   }
 
-  String _formatDate(DateTime? d) =>
-      d == null ? 'Select Date' : '${d.day.toString().padLeft(2,'0')}.${d.month.toString().padLeft(2,'0')}.${d.year}';
+  String get _fmtDate => _pickupDate == null
+      ? 'Select date'
+      : '${_pickupDate!.day.toString().padLeft(2, '0')}.${_pickupDate!.month.toString().padLeft(2, '0')}.${_pickupDate!.year}';
+
+  void _submit() {
+    if (_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Transport created successfully'),
+          backgroundColor: _accent,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      context.pop();
+      context.pop();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117),
-      body: FadeTransition(
-        opacity: _fadeAnim,
-        child: CustomScrollView(
-          slivers: [
-            _buildSliverAppBar(),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  const SizedBox(height: 20),
-                  _buildRouteSection(),
-                  const SizedBox(height: 16),
-                  _buildCargoSection(),
-                  const SizedBox(height: 16),
-                  _buildDimensionsSection(),
-                  const SizedBox(height: 16),
-                  _buildPricingSection(),
-                  const SizedBox(height: 16),
-                  _buildScheduleSection(),
-                  const SizedBox(height: 16),
-                  _buildFlagsSection(),
-                  const SizedBox(height: 16),
-                  _buildNotesSection(),
-                ]),
-              ),
-            ),
-          ],
+      backgroundColor: _cardSurface,
+      appBar: AppBar(
+        backgroundColor: _darkSurface,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Symbols.arrow_back, color: _iconCol),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'New Transport',
+          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
-      bottomNavigationBar: _buildBottomBar(),
-    );
-  }
-
-  Widget _buildSliverAppBar() {
-    return SliverAppBar(
-      expandedHeight: 120,
-      pinned: true,
-      backgroundColor: const Color(0xFF0D1117),
-      surfaceTintColor: Colors.transparent,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white70, size: 20),
-        onPressed: () => Navigator.pop(context),
-      ),
-      actions: [
-        Container(
-          margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
-          child: OutlinedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.save_alt_rounded, size: 16),
-            label: const Text('Draft'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFFFF6B35),
-              side: const BorderSide(color: Color(0xFFFF6B35), width: 1),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            ),
-          ),
-        ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
-        title: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: Form(
+        key: _formKey,
+        onChanged: () => setState(() {}), // badge refresh
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 120),
           children: [
-            const Text(
-              'New Shipment',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-              ),
+
+            // ── Cargo ─────────────────────────────────
+            _Section(
+              icon: Symbols.inventory_2,
+              title: 'Cargo',
+              children: [
+                Row(children: [
+                  Expanded(child: _InputField(
+                    label: 'Weight',
+                    hint: '0.00',
+                    suffix: 'ton',
+                    controller: _weightCtrl,
+                    inputType: TextInputType.number,
+                    validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                  )),
+                  const SizedBox(width: 12),
+                  Expanded(child: _InputField(
+                    label: 'Pallets',
+                    hint: '0',
+                    suffix: 'pcs',
+                    controller: _palletsCtrl,
+                    inputType: TextInputType.number,
+                    validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                  )),
+                ]),
+              ],
             ),
-            Text(
-              'Ashgabat → Iran',
-              style: TextStyle(
-                color: const Color(0xFFFF6B35).withOpacity(0.9),
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
+
+            const SizedBox(height: 14),
+
+            // ── Schedule ──────────────────────────────
+            _Section(
+              icon: Symbols.calendar_month,
+              title: 'Schedule',
+              children: [
+                GestureDetector(
+                  onTap: _pickDate,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: _inputSurf,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _pickupDate != null
+                            ? _accent.withOpacity(0.4)
+                            : Colors.transparent,
+                      ),
+                    ),
+                    child: Row(children: [
+                      Icon(Symbols.calendar_today,
+                          color: _pickupDate != null ? _accent : const Color(0xFF475569),
+                          size: 16),
+                      const SizedBox(width: 10),
+                      Text(
+                        _fmtDate,
+                        style: TextStyle(
+                          color: _pickupDate != null ? Colors.white : const Color(0xFF475569),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ]),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            // ── Price ─────────────────────────────────
+            _Section(
+              icon: Symbols.payments,
+              title: 'Price',
+              children: [
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(
+                    flex: 3,
+                    child: _InputField(
+                      label: 'Offer Price',
+                      hint: '0.00',
+                      controller: _priceCtrl,
+                      inputType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: _DropdownField(
+                      label: 'Currency',
+                      hint: 'USD',
+                      value: _currency,
+                      items: _currencies,
+                      onChanged: (v) => setState(() => _currency = v ?? 'USD'),
+                    ),
+                  ),
+                ]),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            // ── Advanced (ExpansionTile) ───────────────
+            Container(
+              decoration: BoxDecoration(
+                color: _darkSurface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withOpacity(0.07)),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: ExpansionTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: _accent.withOpacity(0.13),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Symbols.tune, color: _accent, size: 16),
+                  ),
+                  title: Row(children: [
+                    const Text(
+                      'Advanced Options',
+                      style: TextStyle(
+                        color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (_advancedFilledCount > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _accent.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '$_advancedFilledCount',
+                          style: const TextStyle(
+                            color: _accent, fontSize: 11, fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ]),
+                  iconColor: _accent,
+                  collapsedIconColor: const Color(0xFF475569),
+                  backgroundColor: _darkSurface,
+                  collapsedBackgroundColor: _darkSurface,
+                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  children: [
+                    Divider(color: Colors.white.withOpacity(0.06), height: 1),
+                    const SizedBox(height: 16),
+
+                    _DropdownField(
+                      label: 'Truck Type',
+                      hint: 'Select truck type',
+                      value: _truckType,
+                      items: _truckTypes,
+                      onChanged: (v) => setState(() => _truckType = v),
+                    ),
+                    const SizedBox(height: 14),
+                    _DropdownField(
+                      label: 'Load Type',
+                      hint: 'Select load type',
+                      value: _loadType,
+                      items: _loadTypes,
+                      onChanged: (v) => setState(() => _loadType = v),
+                    ),
+
+                    // ── Consolidation calculator ──────────
+                    if (_loadType == 'Less Than Load (LTL)' ||
+                        _loadType == 'Groupage / Consolidation') ...[
+                      const SizedBox(height: 14),
+                      _ConsolidationCard(
+                        weightCtrl: _weightCtrl,
+                        volumeCtrl: _volumeCtrl,
+                        loadShareCtrl: _loadShareCtrl,
+                        flexibleLoad: _flexibleLoad,
+                        onFlexibleChanged: (v) => setState(() => _flexibleLoad = v),
+                      ),
+                    ],
+
+                    const SizedBox(height: 14),
+                    _DropdownField(
+                      label: 'Cargo Type',
+                      hint: 'Select cargo type',
+                      value: _cargoType,
+                      items: _cargoTypes,
+                      onChanged: (v) => setState(() => _cargoType = v),
+                    ),
+                    const SizedBox(height: 14),
+                    _InputField(
+                      label: 'Volume',
+                      hint: '0.00',
+                      suffix: 'm³',
+                      controller: _volumeCtrl,
+                      inputType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Toggles
+                    _ToggleTile(
+                      icon: Symbols.broken_image,
+                      label: 'Fragile',
+                      value: _isFragile,
+                      onChanged: (v) => setState(() => _isFragile = v),
+                    ),
+                    _ToggleTile(
+                      icon: Symbols.warning,
+                      label: 'Hazardous Materials',
+                      value: _isHazardous,
+                      onChanged: (v) => setState(() => _isHazardous = v),
+                      iconColor: const Color(0xFFFFD166),
+                    ),
+                    _ToggleTile(
+                      icon: Symbols.ac_unit,
+                      label: 'Refrigeration Required',
+                      value: _needsRefrigeration,
+                      onChanged: (v) => setState(() => _needsRefrigeration = v),
+                      iconColor: const Color(0xFF4CC9F0),
+                    ),
+                    _ToggleTile(
+                      icon: Symbols.shield,
+                      label: 'Cargo Insurance',
+                      value: _needsInsurance,
+                      onChanged: (v) => setState(() => _needsInsurance = v),
+                      iconColor: const Color(0xFF06D6A0),
+                    ),
+                    _ToggleTile(
+                      icon: Symbols.gavel,
+                      label: 'Customs Clearance',
+                      value: _customsClearance,
+                      onChanged: (v) => setState(() => _customsClearance = v),
+                      iconColor: const Color(0xFFEF476F),
+                    ),
+                    const SizedBox(height: 6),
+
+                    TextFormField(
+                      controller: _noteCtrl,
+                      maxLines: 3,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'Special instructions...',
+                        hintStyle: const TextStyle(color: Color(0xFF475569), fontSize: 14),
+                        filled: true,
+                        fillColor: _inputSurf,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: _accent, width: 1.5),
+                        ),
+                        contentPadding: const EdgeInsets.all(14),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
         ),
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: [Color(0xFF1A2035), Color(0xFF0D1117)],
-            ),
-          ),
-        ),
+      ),
+      bottomNavigationBar: _BottomBar(
+        price: _priceCtrl.text,
+        currency: _currency,
+        onSubmit: _submit,
       ),
     );
   }
+}
 
-  Widget _buildSection({
-    required String title,
-    required IconData icon,
-    required List<Widget> children,
-    Color? accent,
-  }) {
-    final color = accent ?? const Color(0xFFFF6B35);
+// ─────────────────────────────────────────────
+//  Section
+// ─────────────────────────────────────────────
+class _Section extends StatelessWidget {
+  const _Section({required this.icon, required this.title, required this.children});
+  final IconData icon;
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF141B2D),
+        color: _darkSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withOpacity(0.07)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, color: color, size: 16),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: _accent.withOpacity(0.13),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  title,
+                child: Icon(icon, color: _accent, size: 16),
+              ),
+              const SizedBox(width: 10),
+              Text(title,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ],
-            ),
+                      color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+            ]),
           ),
           Divider(color: Colors.white.withOpacity(0.06), height: 1),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(children: children),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildRouteSection() {
-    return _buildSection(
-      title: 'Route',
-      icon: Icons.route_rounded,
-      accent: const Color(0xFF4CC9F0),
-      children: [
-        Row(
-          children: [
-            Expanded(child: _buildDropdown(
-              label: 'From',
-              value: _fromCity,
-              icon: Icons.flight_takeoff_rounded,
-              items: _cities,
-              onChanged: (v) => setState(() => _fromCity = v),
-            )),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Column(
-                children: [
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF6B35).withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.arrow_forward_rounded,
-                        color: Color(0xFFFF6B35), size: 16),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(child: _buildDropdown(
-              label: 'To',
-              value: _toCity,
-              icon: Icons.flight_land_rounded,
-              items: _cities,
-              onChanged: (v) => setState(() => _toCity = v),
-            )),
-          ],
+// ─────────────────────────────────────────────
+//  InputField
+// ─────────────────────────────────────────────
+class _InputField extends StatelessWidget {
+  const _InputField({
+    required this.label,
+    required this.hint,
+    required this.controller,
+    this.suffix,
+    this.inputType = TextInputType.text,
+    this.validator,
+  });
+
+  final String label;
+  final String hint;
+  final TextEditingController controller;
+  final String? suffix;
+  final TextInputType inputType;
+  final String? Function(String?)? validator;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _Label(label),
+      const SizedBox(height: 6),
+      TextFormField(
+        controller: controller,
+        keyboardType: inputType,
+        inputFormatters: inputType == TextInputType.number
+            ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
+            : null,
+        validator: validator,
+        style: const TextStyle(color: Colors.white, fontSize: 14),
+        decoration: _dec().copyWith(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Color(0xFF475569)),
+          suffixText: suffix,
+          suffixStyle: const TextStyle(color: Color(0xFF475569), fontSize: 13),
         ),
-        const SizedBox(height: 12),
-        _buildDropdown(
-          label: 'Transport Type',
-          value: _transportType,
-          icon: Icons.local_shipping_rounded,
-          items: _transportTypes,
-          onChanged: (v) => setState(() => _transportType = v),
-        ),
-      ],
-    );
+      ),
+    ]);
   }
+}
 
-  Widget _buildCargoSection() {
-    return _buildSection(
-      title: 'Cargo Details',
-      icon: Icons.inventory_2_rounded,
-      accent: const Color(0xFF7B61FF),
-      children: [
-        _buildDropdown(
-          label: 'Cargo Type',
-          value: _cargoType,
-          icon: Icons.category_rounded,
-          items: _cargoTypes,
-          onChanged: (v) => setState(() => _cargoType = v),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _buildTextField(
-              label: 'Weight (kg)',
-              controller: _weightCtrl,
-              icon: Icons.scale_rounded,
-              hint: '0.00',
-              inputType: TextInputType.number,
-            )),
-            const SizedBox(width: 12),
-            Expanded(child: _buildTextField(
-              label: 'CBM (m³)',
-              controller: _cbmCtrl,
-              icon: Icons.view_in_ar_rounded,
-              hint: '0.00',
-              inputType: TextInputType.number,
-            )),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildTextField(
-          label: 'Number of Pieces / Pallets',
-          controller: _piecesCtrl,
-          icon: Icons.layers_rounded,
-          hint: '0',
-          inputType: TextInputType.number,
-        ),
-      ],
-    );
+// ─────────────────────────────────────────────
+//  DropdownField
+// ─────────────────────────────────────────────
+class _DropdownField extends StatelessWidget {
+  const _DropdownField({
+    required this.label,
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    this.validator,
+  });
+
+  final String label;
+  final String hint;
+  final String? value;
+  final List<String> items;
+  final void Function(String?) onChanged;
+  final String? Function(String?)? validator;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _Label(label),
+      const SizedBox(height: 6),
+      DropdownButtonFormField<String>(
+        value: value,
+        validator: validator,
+        dropdownColor: const Color(0xFF1C2333),
+        style: const TextStyle(color: _iconCol, fontSize: 14),
+        isExpanded: true,
+        icon: const Icon(Symbols.keyboard_arrow_down, color: Color(0xFF475569), size: 20),
+        decoration: _dec(),
+        hint: Text(hint, style: const TextStyle(color: Color(0xFF475569), fontSize: 14)),
+        items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+        onChanged: onChanged,
+      ),
+    ]);
   }
+}
 
-  Widget _buildDimensionsSection() {
-    return _buildSection(
-      title: 'Dimensions (cm)',
-      icon: Icons.straighten_rounded,
-      accent: const Color(0xFF06D6A0),
-      children: [
-        Row(
-          children: [
-            Expanded(child: _buildTextField(
-              label: 'Length',
-              controller: _lengthCtrl,
-              icon: Icons.height_rounded,
-              hint: '0',
-              inputType: TextInputType.number,
-            )),
-            const SizedBox(width: 10),
-            Expanded(child: _buildTextField(
-              label: 'Width',
-              controller: _widthCtrl,
-              icon: Icons.width_normal_rounded,
-              hint: '0',
-              inputType: TextInputType.number,
-            )),
-            const SizedBox(width: 10),
-            Expanded(child: _buildTextField(
-              label: 'Height',
-              controller: _heightCtrl,
-              icon: Icons.vertical_align_top_rounded,
-              hint: '0',
-              inputType: TextInputType.number,
-            )),
-          ],
-        ),
-      ],
-    );
-  }
+// ─────────────────────────────────────────────
+//  ToggleTile (compact – no subtitle)
+// ─────────────────────────────────────────────
+class _ToggleTile extends StatelessWidget {
+  const _ToggleTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.iconColor,
+  });
 
-  Widget _buildPricingSection() {
-    return _buildSection(
-      title: 'Pricing',
-      icon: Icons.payments_rounded,
-      accent: const Color(0xFFFFD166),
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              flex: 3,
-              child: _buildTextField(
-                label: 'Total Price',
-                controller: _priceCtrl,
-                icon: Icons.attach_money_rounded,
-                hint: '0.00',
-                inputType: TextInputType.number,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
-              child: _buildDropdown(
-                label: 'Currency',
-                value: _currency,
-                icon: Icons.currency_exchange_rounded,
-                items: _currencies,
-                onChanged: (v) => setState(() => _currency = v),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildDropdown(
-          label: 'Payment Terms',
-          value: _paymentTerm,
-          icon: Icons.receipt_long_rounded,
-          items: _paymentTerms,
-          onChanged: (v) => setState(() => _paymentTerm = v),
-        ),
-      ],
-    );
-  }
+  final IconData icon;
+  final String label;
+  final bool value;
+  final void Function(bool) onChanged;
+  final Color? iconColor;
 
-  Widget _buildScheduleSection() {
-    return _buildSection(
-      title: 'Schedule',
-      icon: Icons.calendar_month_rounded,
-      accent: const Color(0xFFEF476F),
-      children: [
-        Row(
-          children: [
-            Expanded(child: _buildDateTile(
-              label: 'Loading Date',
-              date: _loadingDate,
-              onTap: () => _pickDate(true),
-            )),
-            const SizedBox(width: 12),
-            Expanded(child: _buildDateTile(
-              label: 'Delivery Date',
-              date: _deliveryDate,
-              onTap: () => _pickDate(false),
-            )),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFlagsSection() {
-    return _buildSection(
-      title: 'Special Requirements',
-      icon: Icons.flag_rounded,
-      accent: const Color(0xFFFF6B35),
-      children: [
-        _buildToggleTile(
-          label: 'Fragile',
-          subtitle: 'Handle with extra care',
-          icon: Icons.broken_image_outlined,
-          value: _isFragile,
-          onChanged: (v) => setState(() => _isFragile = v),
-        ),
-        _buildToggleTile(
-          label: 'Hazardous Materials',
-          subtitle: 'Requires special documentation',
-          icon: Icons.warning_amber_rounded,
-          iconColor: const Color(0xFFFFD166),
-          value: _isHazardous,
-          onChanged: (v) => setState(() => _isHazardous = v),
-        ),
-        _buildToggleTile(
-          label: 'Refrigeration Required',
-          subtitle: 'Temperature-controlled transport',
-          icon: Icons.ac_unit_rounded,
-          iconColor: const Color(0xFF4CC9F0),
-          value: _needsRefrigeration,
-          onChanged: (v) => setState(() => _needsRefrigeration = v),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNotesSection() {
-    return _buildSection(
-      title: 'Notes',
-      icon: Icons.notes_rounded,
-      accent: Colors.white54,
-      children: [
-        TextField(
-          controller: _noteCtrl,
-          maxLines: 3,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
-          decoration: InputDecoration(
-            hintText: 'Additional instructions or remarks...',
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 14),
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.all(14),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDropdown({
-    required String label,
-    required String? value,
-    required IconData icon,
-    required List<String> items,
-    required void Function(String?) onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(
-          color: Colors.white.withOpacity(0.5),
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.5,
-        )),
-        const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          value: value,
-          dropdownColor: const Color(0xFF1C2333),
-          style: const TextStyle(color: Colors.white, fontSize: 14),
-          icon: Icon(Icons.keyboard_arrow_down_rounded,
-              color: Colors.white.withOpacity(0.3), size: 20),
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: const Color(0xFFFF6B35), size: 18),
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-          ),
-          hint: Text('Select', style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 14)),
-          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: onChanged,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    required IconData icon,
-    required String hint,
-    TextInputType inputType = TextInputType.text,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(
-          color: Colors.white.withOpacity(0.5),
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.5,
-        )),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          keyboardType: inputType,
-          inputFormatters: inputType == TextInputType.number
-              ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
-              : null,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: const Color(0xFFFF6B35), size: 18),
-            hintText: hint,
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFFFF6B35), width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDateTile({
-    required String label,
-    required DateTime? date,
-    required VoidCallback onTap,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(
-          color: Colors.white.withOpacity(0.5),
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          letterSpacing: 0.5,
-        )),
-        const SizedBox(height: 6),
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(10),
-              border: date != null
-                  ? Border.all(color: const Color(0xFFFF6B35).withOpacity(0.5))
-                  : null,
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.calendar_today_rounded,
-                    color: Color(0xFFFF6B35), size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  _formatDate(date),
-                  style: TextStyle(
-                    color: date != null ? Colors.white : Colors.white.withOpacity(0.3),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildToggleTile({
-    required String label,
-    required String subtitle,
-    required IconData icon,
-    required bool value,
-    required void Function(bool) onChanged,
-    Color? iconColor,
-  }) {
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: value
-              ? const Color(0xFFFF6B35).withOpacity(0.1)
-              : Colors.white.withOpacity(0.03),
+          color: value ? _accent.withOpacity(0.08) : _inputSurf,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: value
-                ? const Color(0xFFFF6B35).withOpacity(0.4)
-                : Colors.transparent,
+              color: value ? _accent.withOpacity(0.35) : Colors.transparent),
+        ),
+        child: Row(children: [
+          Icon(icon, color: iconColor ?? _iconCol, size: 20),
+          const SizedBox(width: 12),
+          Expanded(child: Text(label,
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500))),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: _accent,
+            activeTrackColor: _accent.withOpacity(0.25),
+            inactiveThumbColor: const Color(0xFF475569),
+            inactiveTrackColor: Colors.white10,
           ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: iconColor ?? Colors.white54, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: const TextStyle(
-                      color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                  Text(subtitle, style: TextStyle(
-                      color: Colors.white.withOpacity(0.4), fontSize: 11)),
-                ],
-              ),
-            ),
-            Switch(
-              value: value,
-              onChanged: onChanged,
-              activeColor: const Color(0xFFFF6B35),
-              activeTrackColor: const Color(0xFFFF6B35).withOpacity(0.3),
-              inactiveThumbColor: Colors.white30,
-              inactiveTrackColor: Colors.white12,
-            ),
-          ],
-        ),
+        ]),
       ),
     );
   }
+}
 
-  Widget _buildBottomBar() {
+// ─────────────────────────────────────────────
+//  Helpers
+// ─────────────────────────────────────────────
+class _Label extends StatelessWidget {
+  const _Label(this.text);
+  final String text;
+  @override
+  Widget build(BuildContext context) => Text(text,
+      style: const TextStyle(
+          color: Color(0xFF64748B), fontSize: 11,
+          fontWeight: FontWeight.w600, letterSpacing: 0.6));
+}
+
+InputDecoration _dec() => InputDecoration(
+  filled: true,
+  fillColor: _inputSurf,
+  border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+  focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: const BorderSide(color: _accent, width: 1.5)),
+  errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: Colors.redAccent.withOpacity(0.6), width: 1.2)),
+  focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: const BorderSide(color: Colors.redAccent, width: 1.5)),
+  errorStyle: const TextStyle(color: Colors.redAccent, fontSize: 11),
+  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+);
+
+// ─────────────────────────────────────────────
+//  ConsolidationCard
+// ─────────────────────────────────────────────
+class _ConsolidationCard extends StatelessWidget {
+  const _ConsolidationCard({
+    required this.weightCtrl,
+    required this.volumeCtrl,
+    required this.loadShareCtrl,
+    required this.flexibleLoad,
+    required this.onFlexibleChanged,
+  });
+
+  final TextEditingController weightCtrl;
+  final TextEditingController volumeCtrl;
+  final TextEditingController loadShareCtrl;
+  final bool flexibleLoad;
+  final void Function(bool) onFlexibleChanged;
+
+  // Chargeable weight = max(actual weight, volumetric weight)
+  // Volumetric weight (ton) = CBM × 0.333  (standard road freight)
+  double get _chargeableWeight {
+    final w = double.tryParse(weightCtrl.text) ?? 0;
+    final cbm = double.tryParse(volumeCtrl.text) ?? 0;
+    final volW = cbm * 0.333;
+    return w > volW ? w : volW;
+  }
+
+  double get _share => double.tryParse(loadShareCtrl.text) ?? 0;
+
+  // Estimated truck capacity: 24 ton / 82 m³ (standard euro trailer)
+  static const double _truckTon = 24;
+  static const double _truckCbm = 82;
+
+  double get _usedTon  => (_share / 100) * _truckTon;
+  double get _usedCbm  => (_share / 100) * _truckCbm;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasShare = _share > 0;
+
     return Container(
-      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF141B2D),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.07))),
+        color: _accent.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _accent.withOpacity(0.22)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Total Price', style: TextStyle(
-                    color: Colors.white.withOpacity(0.4), fontSize: 11)),
-                Text(
-                  '${_priceCtrl.text.isEmpty ? '0.00' : _priceCtrl.text} ${_currency ?? 'USD'}',
-                  style: const TextStyle(
-                    color: Color(0xFFFF6B35),
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+          // Header
+          Row(children: [
+            const Icon(Symbols.merge, color: _accent, size: 16),
+            const SizedBox(width: 8),
+            const Text('Consolidation',
+                style: TextStyle(
+                    color: _accent, fontSize: 12, fontWeight: FontWeight.w700)),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: _accent.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text('LTL / Groupage',
+                  style: TextStyle(
+                      color: _accent, fontSize: 10, fontWeight: FontWeight.w600)),
+            ),
+          ]),
+
+          const SizedBox(height: 12),
+
+          // Load share input
+          _Label('Load Share (% of truck)'),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: loadShareCtrl,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+            style: const TextStyle(color: Colors.white, fontSize: 14),
+            validator: (v) {
+              if (v == null || v.isEmpty) return 'Required for consolidation';
+              final n = double.tryParse(v);
+              if (n == null || n <= 0 || n > 100) return '1 – 100';
+              return null;
+            },
+            decoration: _dec().copyWith(
+              hintText: 'e.g. 40',
+              hintStyle: const TextStyle(color: Color(0xFF475569)),
+              suffixText: '%',
+              suffixStyle: const TextStyle(color: Color(0xFF475569), fontSize: 13),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: SizedBox(
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF6B35),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.check_circle_outline_rounded, size: 18),
-                    SizedBox(width: 8),
-                    Text('Post Shipment', style: TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 15)),
-                  ],
+
+          // Results
+          if (hasShare) ...[
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: _StatChip(
+                label: 'Reserved capacity',
+                value: '${_usedTon.toStringAsFixed(1)} ton',
+                sub: '${_usedCbm.toStringAsFixed(1)} m³',
+              )),
+              const SizedBox(width: 8),
+              Expanded(child: _StatChip(
+                label: 'Chargeable weight',
+                value: '${_chargeableWeight.toStringAsFixed(2)} ton',
+                sub: 'max(actual, vol.)',
+              )),
+            ]),
+          ],
+
+          // Progress bar
+          if (hasShare) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: (_share / 100).clamp(0.0, 1.0),
+                minHeight: 6,
+                backgroundColor: Colors.white.withOpacity(0.08),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  _share > 80 ? const Color(0xFFEF476F) : _accent,
                 ),
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              '${_share.toStringAsFixed(0)}% of standard trailer (24 t / 82 m³)',
+              style: const TextStyle(color: Color(0xFF475569), fontSize: 11),
+            ),
+          ],
+
+          const SizedBox(height: 10),
+
+          // Flexible toggle
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: flexibleLoad ? _accent.withOpacity(0.08) : _inputSurf,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                  color: flexibleLoad ? _accent.withOpacity(0.3) : Colors.transparent),
+            ),
+            child: Row(children: [
+              const Icon(Symbols.swap_horiz, color: _iconCol, size: 18),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text('Flexible load share',
+                    style: TextStyle(
+                        color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+              ),
+              Switch(
+                value: flexibleLoad,
+                onChanged: onFlexibleChanged,
+                activeColor: _accent,
+                activeTrackColor: _accent.withOpacity(0.25),
+                inactiveThumbColor: const Color(0xFF475569),
+                inactiveTrackColor: Colors.white10,
+              ),
+            ]),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  const _StatChip({required this.label, required this.value, required this.sub});
+  final String label;
+  final String value;
+  final String sub;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: _inputSurf,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label,
+            style: const TextStyle(
+                color: Color(0xFF475569), fontSize: 10, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+        Text(sub,
+            style: const TextStyle(color: Color(0xFF475569), fontSize: 10)),
+      ]),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+//  Bottom bar
+// ─────────────────────────────────────────────
+class _BottomBar extends StatelessWidget {
+  const _BottomBar({required this.price, required this.currency, required this.onSubmit});
+  final String price;
+  final String currency;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+          16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+      decoration: BoxDecoration(
+        color: _darkSurface,
+        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.07))),
+      ),
+      child: Row(children: [
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Price',
+                  style: TextStyle(color: Color(0xFF475569), fontSize: 11)),
+              Text('${price.isEmpty ? '—' : price} $currency',
+                  style: const TextStyle(
+                      color: _accent, fontSize: 20, fontWeight: FontWeight.w700)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: SizedBox(
+            height: 50,
+            child: ElevatedButton(
+              onPressed: onSubmit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _accent,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Symbols.check_circle, size: 18),
+                  SizedBox(width: 8),
+                  Text('Create Transport',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ]),
     );
   }
 }

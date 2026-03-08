@@ -14,14 +14,19 @@ class HomeBody extends StatelessWidget {
             shrinkWrap: true,
             itemCount: isSecond ? secondLoads.length : loads.length,
             itemBuilder: (BuildContext context, int index) {
-              // if(isSecond){
-              //   return Container(height: 100,width: 100,color: Colors.blue,);
-              //
-              //   return LoadCard(load: secondLoads[index]);
-              // }else{
-                return SimpleLoadMain(simpleLoads: loads[index]);
-              // }
-            },
+              return SimpleLoadMain(
+                  simpleLoads: loads[index],
+                  onPressed: (load) {
+                    context.pushNamed(
+                        AppPath.loadDetail.name,
+                        pathParameters: {'id' : load?.id ?? 0.toString()},
+                      extra: {
+                          "load": load,
+                      }
+                    );
+                  },
+                );
+              },
           ),
         ),
       ],
